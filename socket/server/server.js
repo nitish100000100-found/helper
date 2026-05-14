@@ -10,66 +10,44 @@ const app = express();
 
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL
+        origin: process.env.FRONTEND_URL,
+        credentials: true
     })
 );
-
-app.get("/", (req, res) => {
-    res.send("Server running");
-});
 
 const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
         origin: process.env.FRONTEND_URL,
-        methods: ["GET", "POST"]
+        credentials: true
     }
 });
 
 io.on("connection", (socket) => {
 
-    console.log("Connected:", socket.id);
+    console.log("User connected:", socket.id);
 
-    // sender only
-    socket.on("normalMessage", (msg) => {
+    socket.on("sendMessage", ({ msg, targetSocketId }) => {
 
-        socket.emit(
+        console.log("Message:", msg);
+        console.log("To:", targetSocketId);
+
+        io.to(targetSocketId).emit(
             "receiveMessage",
-            "Normal: " + msg
+            msg
         );
 
     });
 
-    // everyone except sender
-    socket.on("broadcastMessage", (msg) => {
-
-        socket.broadcast.emit(
-            "receiveMessage",
-            "Broadcast: " + msg
-        );
-
-    });
-
-    // everyone including sender
-    socket.on("allMessage", (msg) => {
-
-        io.emit(
-            "receiveMessage",
-            "All: " + msg
-        );
-
-    });
-
-    socket.on("disconnect", (reason) => {
-
-        console.log("Disconnected:", socket.id);
-        console.log("Reason:", reason);
-
+    socket.on("disconnect", () => {
+        console.log("User disconnected:", socket.id);
     });
 
 });
 
-server.listen(3000, () => {
-    console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log(`Server running on ${PORT}`);
 });

@@ -1,50 +1,68 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 const socket = io(import.meta.env.VITE_BACKEND_URL);
 
-socket.on("receiveMessage", (msg) => {
-    console.log("Received:", msg);
-});
-
 function App() {
 
+    const [socketId, setSocketId] = useState("My id will appear here");
+
     const msgRef = useRef();
+    const targetRef = useRef();
 
-    function sendToUser() {
-        socket.emit("normalMessage", msgRef.current.value);
-        msgRef.current.value = "";
-    }
+    useEffect(() => {
 
-    function broadcast() {
-        socket.emit("broadcastMessage", msgRef.current.value);
-        msgRef.current.value = "";
-    }
+        socket.on("connect", () => {
+            setSocketId("My ID: " + socket.id);
+        });
 
-    function sendToAll() {
-        socket.emit("allMessage", msgRef.current.value);
+        socket.on("receiveMessage", (msg) => {
+            console.log("Received:", msg);
+        });
+
+        return () => {
+            socket.off("connect");
+            socket.off("receiveMessage");
+        };
+
+    }, []);
+
+    function sendMessage() {
+
+        const msg = msgRef.current.value;
+        const targetSocketId = targetRef.current.value;
+
+        socket.emit("sendMessage", {
+            msg,
+            targetSocketId
+        });
+
         msgRef.current.value = "";
+        targetRef.current.value = "";
     }
 
     return (
-        <div>
-            <h1>Socket Demo</h1>
+        <div style={{ padding: "20px" }}>
+
+            <h2>Your Socket ID:</h2>
+            <p>{socketId}</p>
 
             <input
                 ref={msgRef}
-                placeholder="Type message"
+                placeholder="Enter message"
             />
 
-            <button onClick={sendToUser}>
-                Send To User
-            </button>
+            <br /><br />
 
-            <button onClick={broadcast}>
-                Broadcast
-            </button>
+            <input
+                ref={targetRef}
+                placeholder="Send to socket id"
+            />
 
-            <button onClick={sendToAll}>
-                Send To All
+            <br /><br />
+
+            <button onClick={sendMessage}>
+                Send
             </button>
 
         </div>
