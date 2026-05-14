@@ -1,53 +1,66 @@
 import express from "express";
-import cors from "cors";
-import { createServer } from "http";
+import http from "http";
 import { Server } from "socket.io";
+const app = express();
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const app = express();
-
-app.use(
-    cors({
-        origin: process.env.FRONTEND_URL,
-        credentials: true
-    })
-);
-
-const server = createServer(app);
+const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL,
-        credentials: true
+        origin: process.env.FRONTEND_URL
     }
 });
 
+
 io.on("connection", (socket) => {
 
-    console.log("User connected:", socket.id);
+    console.log(
+        "User connected:",
+        socket.id
+    );
 
-    socket.on("sendMessage", ({ msg, targetSocketId }) => {
 
-        console.log("Message:", msg);
-        console.log("To:", targetSocketId);
+    socket.on("joinRoom", (room) => {
 
-        io.to(targetSocketId).emit(
-            "receiveMessage",
-            msg
+        socket.join(room);
+
+        console.log(
+            `${socket.id} joined ${room}`
         );
 
     });
 
+
+    socket.on(
+        "sendToRoom",
+        ({ msg, room }) => {
+
+            socket.to(room).emit(
+                "receiveMessage",
+                `${socket.id}: ${msg}`
+            );
+
+        }
+    );
+
+
     socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+
+        console.log(
+            "Disconnected:",
+            socket.id
+        );
+
     });
 
 });
 
-const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-    console.log(`Server running on ${PORT}`);
+server.listen(3000, () => {
+    console.log(
+        "Server running on port 3000"
+    );
 });
